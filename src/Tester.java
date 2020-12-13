@@ -50,17 +50,28 @@ public class Tester {
     // An idea would be to compute the standard deviation of the invocation histogram and see how likely
     // it is that the numbers are really random, but every once in a while the test might fail.
     // I think checking this by eye is enough for the requirements of the problem.
-    private static void testRandomLoadBalancing()
-    {
-        LoadBalancer loadBalancer = buildLoadBalancerWithProviders();
+    private static void testRandomLoadBalancing() {
+        LoadBalancer loadBalancer = buildLoadBalancerWithProviders(Protocol.RANDOM);
         int testCases = maxProvidersPerLoadBalancer * 2;
         for (int i = 0; i < testCases; ++i) {
             System.out.println(loadBalancer.get());
         }
     }
 
-    private static LoadBalancer buildLoadBalancerWithProviders() {
-        LoadBalancer loadBalancer = new LoadBalancer();
+    // Step 4 - Round Robin invocation
+    private static void testRoundRobinLoadBalancing() {
+        LoadBalancer loadBalancer = buildLoadBalancerWithProviders(Protocol.ROUND_ROBIN);
+        String[] uniqueIdentifiers = new String[maxProvidersPerLoadBalancer];
+
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i)
+            uniqueIdentifiers[i] = loadBalancer.get();
+
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i)
+            assert (uniqueIdentifiers[i].equals(loadBalancer.get()));
+    }
+
+    private static LoadBalancer buildLoadBalancerWithProviders(Protocol protocol) {
+        LoadBalancer loadBalancer = new LoadBalancer(protocol);
         for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
             Provider provider = new Provider();
             try {
@@ -77,5 +88,6 @@ public class Tester {
         testProvider();
         testRegistering();
         testRandomLoadBalancing();
+        testRoundRobinLoadBalancing();
     }
 }
