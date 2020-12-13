@@ -10,13 +10,6 @@ public class LoadBalancer
     private Integer nextRoundRobinIndex = 0;
     private Protocol protocol;
 
-    public synchronized void registerProvider(Provider provider) throws SizeLimitExceededException {
-        if (providers.size() >= maximumNumberOfProviders)
-            throw new SizeLimitExceededException();
-        else
-            providers.add(provider);
-    }
-
     private String getRandom() {
         Random randomNumberGenerator = new Random();
         int idx = randomNumberGenerator.nextInt(providers.size());
@@ -40,6 +33,17 @@ public class LoadBalancer
             default:
                 return getRandom();
         }
+    }
+
+    public synchronized void registerProvider(Provider provider) throws SizeLimitExceededException {
+        if (providers.size() >= maximumNumberOfProviders)
+            throw new SizeLimitExceededException();
+        else
+            providers.add(provider);
+    }
+
+    public synchronized void excludeProvider(Provider provider) {
+        providers.remove(provider);
     }
 
     public LoadBalancer() {

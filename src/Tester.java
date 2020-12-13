@@ -70,6 +70,29 @@ public class Tester {
             assert (uniqueIdentifiers[i].equals(loadBalancer.get()));
     }
 
+    // Step 5 - manual node exclusion/inclusion
+    private static void testIncludeExclude() {
+        Provider provider1 = new Provider();
+        Provider provider2 = new Provider();
+
+        LoadBalancer loadBalancer = new LoadBalancer(Protocol.ROUND_ROBIN);
+
+        try {
+            loadBalancer.registerProvider(provider1);
+            loadBalancer.registerProvider(provider2);
+        }
+        catch (Exception e) {
+            assert (false);
+        }
+
+        assert (!loadBalancer.get().equals(loadBalancer.get()));
+
+        loadBalancer.excludeProvider(provider1);
+
+        assert (loadBalancer.get().equals(provider2.get()));
+        assert (loadBalancer.get().equals(provider2.get()));
+    }
+
     private static LoadBalancer buildLoadBalancerWithProviders(Protocol protocol) {
         LoadBalancer loadBalancer = new LoadBalancer(protocol);
         for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
@@ -89,5 +112,6 @@ public class Tester {
         testRegistering();
         testRandomLoadBalancing();
         testRoundRobinLoadBalancing();
+        testIncludeExclude();
     }
 }
