@@ -1,10 +1,9 @@
 import javax.naming.SizeLimitExceededException;
 import javax.swing.*;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class Tester {
+    private static int maxProvidersPerLoadBalancer = 10;
 
     // Step 1 - Generate Provider
     private static void testProvider() {
@@ -23,7 +22,6 @@ public class Tester {
     private static void testRegistering() {
         LoadBalancer loadBalancer = new LoadBalancer();
 
-        int maxProvidersPerLoadBalancer = 10;
         Provider[] providers = new Provider[maxProvidersPerLoadBalancer];
         for (int i = 0; i < maxProvidersPerLoadBalancer; ++i)
             providers[i] = new Provider();
@@ -48,8 +46,36 @@ public class Tester {
 
     }
 
+    // Step 3 - random invocation
+    // An idea would be to compute the standard deviation of the invocation histogram and see how likely
+    // it is that the numbers are really random, but every once in a while the test might fail.
+    // I think checking this by eye is enough for the requirements of the problem.
+    private static void testRandomLoadBalancing()
+    {
+        LoadBalancer loadBalancer = buildLoadBalancerWithProviders();
+        int testCases = maxProvidersPerLoadBalancer * 2;
+        for (int i = 0; i < testCases; ++i) {
+            System.out.println(loadBalancer.get());
+        }
+    }
+
+    private static LoadBalancer buildLoadBalancerWithProviders() {
+        LoadBalancer loadBalancer = new LoadBalancer();
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
+            Provider provider = new Provider();
+            try {
+                loadBalancer.registerProvider(provider);
+            }
+            catch (Exception e) {
+                assert (false);
+            }
+        }
+        return loadBalancer;
+    }
+
     public static void main(String[] args) {
         testProvider();
         testRegistering();
+        testRandomLoadBalancing();
     }
 }
