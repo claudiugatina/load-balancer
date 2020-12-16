@@ -9,37 +9,58 @@ public class LoadBalancer
     private List<Provider> providers = new ArrayList<>();
     private Integer nextRoundRobinIndex = 0;
     private Protocol protocol;
+    private HeartbeatChecker heartbeatChecker = new HeartbeatChecker(providers);
 
-    private String getRandom() {
+    private Provider getRandom() {
         Random randomNumberGenerator = new Random();
         int idx = randomNumberGenerator.nextInt(providers.size());
-        Provider provider = providers.get(idx);
-        return provider.get();
+        return providers.get(idx);
     }
 
-    private String getRoundRobin() {
+    private synchronized Provider getRoundRobin() {
         Provider provider = providers.get(nextRoundRobinIndex);
         nextRoundRobinIndex++;
         nextRoundRobinIndex %= providers.size();
+        return provider;
+    }
+
+    public String get() {
+        Provider provider;
+        do {
+            switch (protocol) {
+                case RANDOM:
+                    provider = getRandom();
+                    break;
+                case ROUND_ROBIN:
+                    provider = getRoundRobin();
+                    break;
+                default:
+                    provider = getRandom();
+                    break;
+            }
+        } while (!heartbeatChecker.getAvailability(provider));
         return provider.get();
     }
 
-    public synchronized String get() {
-        switch (protocol) {
-            case RANDOM:
-                return getRandom();
-            case ROUND_ROBIN:
-                return getRoundRobin();
-            default:
-                return getRandom();
+    public synchronized void registerProvider(Provider provider) throws SizeLimitExceededException {
+        if (providers.size() >= maximumNumberOfProviders) {
+            throw new SizeLimitExceededException();
+        }
+        else {
+            providers.add(provider);
+            heartbeatChecker.initialCheck(provider);
         }
     }
 
-    public synchronized void registerProvider(Provider provider) throws SizeLimitExceededException {
-        if (providers.size() >= maximumNumberOfProviders)
-            throw new SizeLimitExceededException();
-        else
-            providers.add(provider);
+    public void registerProviders(Provider[] providers) {
+        for (Provider provider : providers) {
+            try {
+                registerProvider(provider);
+            }
+            catch (SizeLimitExceededException e) {
+                System.out.println("Providers not registered");
+            }
+        }
     }
 
     public synchronized void excludeProvider(Provider provider) {
@@ -48,9 +69,11 @@ public class LoadBalancer
 
     public LoadBalancer() {
         protocol = Protocol.RANDOM;
+        heartbeatChecker.start();
     }
 
     public LoadBalancer(Protocol protocol) {
         this.protocol = protocol;
+        heartbeatChecker.start();
     }
 }

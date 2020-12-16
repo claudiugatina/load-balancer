@@ -93,25 +93,50 @@ public class Tester {
         assert (loadBalancer.get().equals(provider2.get()));
     }
 
+    // Step 6 & 7 - heart beat checker
+    private static void testHeartbeatChecker() throws InterruptedException {
+        LoadBalancer loadBalancer = new LoadBalancer(Protocol.ROUND_ROBIN);
+        Provider[] providers = generateProviders();
+        loadBalancer.registerProviders(providers);
+        providers[3].kill();
+        Thread.sleep(7000);
+
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
+            assert (!loadBalancer.get().equals(providers[3].get()));
+        }
+
+        providers[3].fix();
+        Thread.sleep(14000);
+
+        boolean backInBusiness = false;
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
+            if (loadBalancer.get().equals(providers[3].get()))
+                backInBusiness = true;
+        }
+
+        assert (backInBusiness);
+    }
+
     private static LoadBalancer buildLoadBalancerWithProviders(Protocol protocol) {
         LoadBalancer loadBalancer = new LoadBalancer(protocol);
-        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i) {
-            Provider provider = new Provider();
-            try {
-                loadBalancer.registerProvider(provider);
-            }
-            catch (Exception e) {
-                assert (false);
-            }
-        }
+        Provider[] providers = generateProviders();
+            loadBalancer.registerProviders(providers);
         return loadBalancer;
     }
 
-    public static void main(String[] args) {
+    private static Provider[] generateProviders() {
+        Provider[] providers = new Provider[maxProvidersPerLoadBalancer];
+        for (int i = 0; i < maxProvidersPerLoadBalancer; ++i)
+            providers[i] = new Provider();
+        return providers;
+    }
+
+    public static void main(String[] args)  throws Exception{
         testProvider();
         testRegistering();
         testRandomLoadBalancing();
         testRoundRobinLoadBalancing();
         testIncludeExclude();
+        testHeartbeatChecker();
     }
 }
