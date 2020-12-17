@@ -7,6 +7,8 @@ public class LoadBalancer
 {
     private static Integer maximumNumberOfProviders = 10;
     private List<Provider> providers = new ArrayList<>();
+    private Integer numberOfParallelRequests = 0;
+    private final Object lock = new Object();
     private Integer nextRoundRobinIndex = 0;
     private Protocol protocol;
     private HeartbeatChecker heartbeatChecker = new HeartbeatChecker(providers);
@@ -25,6 +27,38 @@ public class LoadBalancer
     }
 
     public String get() {
+        acceptRequestOrWait();
+        Provider provider = pickAliveProviderUsingProtocol();
+        String result = provider.get();
+        finishRequest();
+        return result;
+    }
+
+    private void acceptRequestOrWait() {
+        try {
+            synchronized (lock) {
+                if (numberOfParallelRequests >= maxNumberOfParallelRequests())
+                    lock.wait();
+                numberOfParallelRequests++;
+            }
+        }
+        catch (InterruptedException e) {
+            System.out.println("Interrupted");
+        }
+    }
+
+    private void finishRequest() {
+        synchronized (lock) {
+            numberOfParallelRequests--;
+            lock.notify();
+        }
+    }
+
+    private Integer maxNumberOfParallelRequests() {
+        return Provider.getMaximumParallelRequests() * heartbeatChecker.getNumberOfAliveProviders();
+    }
+
+    private Provider pickAliveProviderUsingProtocol() {
         Provider provider;
         do {
             switch (protocol) {
@@ -39,7 +73,7 @@ public class LoadBalancer
                     break;
             }
         } while (!heartbeatChecker.getAvailability(provider));
-        return provider.get();
+        return provider;
     }
 
     public synchronized void registerProvider(Provider provider) throws SizeLimitExceededException {

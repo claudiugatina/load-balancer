@@ -117,6 +117,29 @@ public class Tester {
         assert (backInBusiness);
     }
 
+    // Step 8 - Cluster Capacity Limit
+    // Again, tested by eye rather than by assert statements.
+    // If processing a get() takes x seconds and a provider can process Y parallel get()s
+    // then we should see Y lines containing a Provider UID every x seconds.
+    // This does NOT guarantee that a provider doesn't get more than Y parallel requests.
+    // The task is implemented at the LoadBalancer level, as per requirements.
+    private static void testClusterCapacityLimit() {
+        Provider provider = new SlowProvider();
+        LoadBalancer loadBalancer = new LoadBalancer();
+        try {
+            loadBalancer.registerProvider(provider);
+        }
+        catch (SizeLimitExceededException e) {}
+
+        for (int i = 0; i < 100; ++i) {
+            (new Thread() {
+                public void run() {
+                    System.out.println(loadBalancer.get());
+                }
+            }).start();
+        }
+    }
+
     private static LoadBalancer buildLoadBalancerWithProviders(Protocol protocol) {
         LoadBalancer loadBalancer = new LoadBalancer(protocol);
         Provider[] providers = generateProviders();
@@ -138,5 +161,6 @@ public class Tester {
         testRoundRobinLoadBalancing();
         testIncludeExclude();
         testHeartbeatChecker();
+        testClusterCapacityLimit();
     }
 }

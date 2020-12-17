@@ -28,6 +28,10 @@ public class HeartbeatChecker extends  Thread {
         }
     }
 
+    public Integer getNumberOfAliveProviders() {
+        return aliveProviders.size();
+    }
+
     private void successfulCheck(Provider provider) {
         if (aliveProviders.contains(provider)) {
         }
